@@ -14,15 +14,30 @@ var (
 	selfOnce sync.Once
 )
 
+func ipSetup() (string, error) {
+	var err error
+	ip := config.GlobalConfig().IP
+	if ip == _const.DEFAULTIP {
+		ip, err = util.IP()
+		if err != nil {
+			logs.NewLog(err.Error(), logs.FatalLevel, logs.JSONLogFormat)
+			return "", err
+		}
+	}
+	return ip, nil
+}
+
 func Self() (*Node, error) {
 	var err error
 	selfOnce.Do(func() {
-		ip, err := util.IP()
+		ip, err := ipSetup()
 		if err != nil {
-			logs.NewLog(err.Error(), logs.FatalLevel, logs.JSONLogFormat)
-			return
+			ExitGracefully("unable to obtain public ip " + err.Error())
 		}
-		self = &Node{GID: config.GlobalConfig().GID, RelayPort: config.GlobalConfig().RRPCPort,
+		if err != nil {
+			ExitGracefully("unable to generate GID " + err.Error())
+		}
+		self = &Node{GID: config.GlobalConfig().GID, RelayPort: config.GlobalConfig().Port, // notice this change
 			IP: ip, ClientPort: config.GlobalConfig().CRPCPort, Blockchains: ChainsSlice(),
 			ClientID: _const.CLIENTID, CliVersion: _const.VERSION}
 	})
